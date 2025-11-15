@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deploy Razki — Netlify</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#111922;--accent:#4ef26f;--muted:#7ef26f;
+  --glass:rgba(46,242,111,.05);--highlight:#1c2a1f;--border:rgba(46,242,111,.2);
+  --shadow:rgba(0,0,0,.9);--glow:rgba(46,242,111,.3)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  height:100%;width:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;overflow:hidden
+}
+#snow{position:fixed;inset:0;z-index:0;pointer-events:none;background:transparent}
+.card{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;position:relative;z-index:1}
+h1{font-size:32px;font-weight:800;letter-spacing:-1px;white-space:nowrap;display:flex;align-items:center;gap:.25rem}
+.typewriter-text{display:inline-block;min-width:1px}
+.caret{display:inline-block;width:2px;height:1.2em;background:var(--accent);transform:translateY(2px);animation:blink 1s steps(1,end) infinite}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.panel{background:var(--panel);padding:40px;border-radius:24px;border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;width:90%;max-width:600px;gap:20px;box-shadow:0 20px 60px var(--shadow)}
+label{font-size:16px;font-weight:600;color:var(--muted);text-align:center}
+input[type="text"],input[type="file"]{width:100%;padding:18px;border-radius:16px;background:var(--glass);border:1px solid var(--border);color:var(--accent);font-size:16px;transition:all .3s}
+input:focus{outline:none;border-color:var(--accent);background:var(--highlight);box-shadow:0 0 12px var(--glow)}
+.muted{color:var(--muted);font-size:14px;text-align:center}
+.btn{padding:16px 28px;border-radius:16px;background:var(--panel);border:1px solid var(--border);color:var(--accent);font-size:16px;font-weight:600;cursor:pointer;transition:all .3s;width:100%;text-align:center}
+.btn:hover{background:var(--highlight);box-shadow:0 8px 20px var(--shadow)}
+.btn.primary{background:linear-gradient(180deg,var(--accent),var(--panel));font-weight:700;animation:pulse 2s infinite}
+.upload-area{position:relative;width:100%;height:220px;border:2px dashed var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--glass);transition:border-color .3s;overflow:hidden;flex-direction:column;gap:12px}
+.upload-area:hover{border-color:var(--accent)}
+.upload-icon svg{width:100px;height:100px;stroke:var(--accent);stroke-width:2;fill:none;filter:drop-shadow(0 0 6px var(--glow))}
+.upload-text{font-size:14px;color:var(--muted)}
+input[type="file"]{position:absolute;width:100%;height:100%;opacity:0;cursor:pointer}
+.result{margin-top:20px;padding:20px;border-radius:16px;background:var(--glass);border:1px solid var(--border);width:100%;text-align:center;display:none;font-weight:500}
+.loading-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.95);backdrop-filter:blur(12px);z-index:999}
+.loader{width:450px;padding:36px;border-radius:24px;background:var(--panel);border:1px solid var(--border);box-shadow:0 25px 80px var(--shadow);display:flex;flex-direction:column;align-items:center;gap:16px}
+.progress-bar{width:100%;height:10px;background:var(--glass);border-radius:10px;overflow:hidden;margin-top:12px}
+.progress{width:0%;height:100%;background:var(--accent);transition:width .3s}
+.file-name{font-size:14px;color:var(--accent);margin-top:8px;text-align:center}
+@keyframes pulse{0%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 20px 8px var(--glow)}100%{box-shadow:0 0 0 0 var(--glow)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><span class="typewriter-text" id="typeTarget"></span><span class="caret"></span></h1>
+  <div class="panel">
+    <label for="siteName">Deploy ke Netlify</label>
+    <input id="siteName" type="text" placeholder="situsunik" />
+    <div class="muted">Domain: <span id="previewDomain">tidak ada</span>.netlify.app</div>
+    <label>Pilih File</label>
+    <div class="upload-area">
+      <div class="upload-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M4 14.5a4.5 4.5 0 0 1 1-8.9 6 6 0 0 1 11.7-1.6 5 5 0 0 1 2.3 9.5"/>
+          <path d="M12 12v6m0-6 3 3m-3-3-3 3"/>
+        </svg>
+      </div>
+      <div class="upload-text">Klik atau seret file ke sini</div>
+      <input id="fileInput" type="file" accept=".zip,.html" />
+    </div>
+    <div class="file-name" id="fileName">Belum ada file</div>
+    <button class="btn primary" id="deployBtn">Deploy ke Netlify</button>
+    <div class="result" id="resultBox"></div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="loader">
+    <div>Mendeploy...</div>
+    <div class="progress-bar"><div class="progress" id="progress"></div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const NETLIFY_TOKEN = ""; // ganti dengan API token kamu
+const siteNameEl=document.getElementById('siteName');
+const previewDomain=document.getElementById('previewDomain');
+const fileInput=document.getElementById('fileInput');
+const fileName=document.getElementById('fileName');
+const deployBtn=document.getElementById('deployBtn');
+const resultBox=document.getElementById('resultBox');
+const loading=document.getElementById('loading');
+const progress=document.getElementById('progress');
+
+siteNameEl.addEventListener('input',()=>{
+  const v=siteNameEl.value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+  siteNameEl.value=v;
+  previewDomain.textContent=v||'tidak ada';
+});
+fileInput.addEventListener('change',()=>{
+  fileName.textContent=fileInput.files.length?fileInput.files[0].name:"Belum ada file";
+});
+function showLoading(on,pct=0){loading.style.display=on?'flex':'none';progress.style.width=pct+'%';}
+function showResult(html){resultBox.style.display='block';resultBox.innerHTML=html;}
+
+async function bufferToBase64(buf){
+  let bin='',bytes=new Uint8Array(buf);
+  for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function prepareFilesFromZip(ab){
+  const zip=await JSZip.loadAsync(ab);const files=[];
+  await Promise.all(Object.keys(zip.files).map(async p=>{
+    const e=zip.files[p];
+    if(!e.dir){
+      const d=await e.async('uint8array');
+      files.push({path:p.replace(/^\/+/,'').replace(/\\/g,'/'),content:btoa(String.fromCharCode(...d))});
+    }
+  }));
+  return files;
+}
+
+deployBtn.addEventListener('click',async()=>{
+  const siteName=siteNameEl.value;const file=fileInput.files[0];
+  if(!siteName||!file){alert("Isi nama dan pilih file");return;}
+  showLoading(true,20);
+  let files=[];
+  try{
+    if(file.name.endsWith(".zip")){
+      const ab=await file.arrayBuffer();files=await prepareFilesFromZip(ab);
+    }else{
+      const ab=await file.arrayBuffer();files.push({path:"index.html",content:await bufferToBase64(ab)});
+    }
+  }catch(e){showLoading(false);showResult("❌ Gagal membaca file");return;}
+  if(!files.find(x=>x.path.toLowerCase().endsWith("index.html"))){
+    showLoading(false);showResult("❌ index.html tidak ditemukan");return;
+  }
+  showLoading(true,60);
+  // Buat site baru
+  const siteRes=await fetch("https://api.netlify.com/api/v1/sites",{
+    method:"POST",headers:{Authorization:`Bearer ${NETLIFY_TOKEN}`,"Content-Type":"application/json"},
+    body:JSON.stringify({name:siteName})
+  });
+  const siteData=await siteRes.json();
+  if(!siteData.id){showLoading(false);showResult("❌ Gagal membuat site");return;}
+  // Deploy
+  const deployRes=await fetch(`https://api.netlify.com/api/v1/sites/${siteData.id}/deploys`,{
+    method:"POST",headers:{Authorization:`Bearer ${NETLIFY_TOKEN}`,"Content-Type":"application/json"},
+    body:JSON.stringify({files:files.reduce((acc,f)=>{acc[f.path]={base64:f.content};return acc;},{}),})
+  });
+  const deployData=await deployRes.json();
+  showLoading(false);
+  if(deployData.deploy_ssl_url){
+    showResult(`✅ Berhasil!<br><a href="${deployData.deploy_ssl_url}" target="_blank">${deployData.deploy_ssl_url}</a>`);
+  }else{
+    showResult("❌ Gagal deploy ke Netlify");
+  }
+});
+</script>
+</body>
+</html>
